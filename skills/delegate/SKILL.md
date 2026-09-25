@@ -9,7 +9,9 @@ Keep the main session responsible for decisions and acceptance. Delegate investi
 
 ## Main session role
 
-Use the role the user specifies. Otherwise, combine advisor, architect, and reviewer: clarify the outcome, choose interfaces and constraints, divide work, assess evidence, and explain decisions. State the role once. Ask about the role only when the choice changes the requested outcome.
+By default, coordinate the work: clarify the outcome, assign tasks, track progress, check results, and explain decisions. Keep task execution with subagents.
+
+If the user specifies a role, use that role instead. Ask for clarification only when the specified role is unclear.
 
 Read only the instructions, contracts, selected code, and evidence needed for these decisions. Assign broad searches, bulk reads, edits, and test runs to subagents. Review important changes directly; do not repeat a subagent's full investigation. Send corrections back to the responsible subagent.
 
