@@ -1,92 +1,130 @@
 ---
 name: delegate
-description: Delegate execution to lower-cost subagents while the main session acts as advisor, reviewer, architect, or a user-specified role. Use when the user asks for this division of work, task-based model and effort selection, or a main session with minimal execution context.
+description: Delegate execution to lower-cost subagents while the main session coordinates and reviews. Use when the user requests this division of work.
 ---
 
 # Delegate
 
-Keep the main session responsible for decisions and acceptance. Delegate investigation, implementation, and test execution to subagents. A subagent is a separate agent with its own task and context. Use this mode for the current task and its follow-ups until the user changes it.
+Keep decisions and acceptance in the main session. Assign investigation,
+implementation, and test execution to subagents. A subagent is a separate
+agent with its own task and context.
 
-## Main session role
+Use this mode for the current task and its follow-ups until the user
+changes it. Follow the user's specified role. Otherwise, coordinate
+the work and review the results.
 
-By default, coordinate the work: clarify the outcome, assign tasks, track progress, check results, and explain decisions. Keep task execution with subagents.
+## Keep scope and context bounded
 
-If the user specifies a role, use that role instead. Ask for clarification only when the specified role is unclear.
+Delegation does not expand authorization. Keep advisory and review tasks
+read-only unless the user authorizes changes. Pass applicable user
+constraints and repository instructions to each subagent.
 
-Read only the instructions, contracts, selected code, and evidence needed for these decisions. Assign broad searches, bulk reads, edits, and test runs to subagents. Review important changes directly; do not repeat a subagent's full investigation. Send corrections back to the responsible subagent.
+Read only the instructions, interfaces, selected code, and evidence needed
+to make decisions. Assign broad searches, bulk reads, edits, and test runs
+to subagents. Inspect important changes directly without repeating the
+full investigation.
 
-Delegation does not expand the task. An advisory or review request stays read-only unless the user authorizes changes. Keep the user's approval requirements and repository instructions in every assignment.
+## Select model and effort
 
-## Choose model and effort
+Use the active tool schema and available model list. Prefer a lower-cost
+model that can meet the acceptance criteria. Do not infer cost from a
+model's age or name.
 
-The main session chooses both settings for every assignment. Use the active tool schema and available model list. Prefer a lower-cost model than the main session when it can meet the task's acceptance criteria. Do not assume an older model is cheaper.
+Choose supported effort according to the task:
 
-| Task | Model choice | Starting effort, when supported |
-| --- | --- | --- |
-| Targeted lookup, extraction, mechanical edit, known test command | Smallest capable model | Low |
-| Bounded implementation or investigation with clear criteria | Lower-cost capable model | Medium |
-| Subtle defect, complex behavior, or consequential review | Strongest suitable lower-cost model | High |
+| Task | Starting effort |
+| --- | --- |
+| Targeted lookup, extraction, mechanical edit, known test command | Low |
+| Bounded implementation or investigation with clear criteria | Medium |
+| Subtle defect, complex behavior, consequential review | High |
 
-These are starting points. Choose effort from ambiguity, reasoning depth, and the cost of an incorrect result. Task length alone does not justify high effort. State the selected model, effort, and reason in one short sentence before dispatch. Keep the main session's model unchanged.
+Adjust these starting points for ambiguity and the cost of an incorrect
+result. State the selected model, effort, and reason before dispatch.
+Keep the main session's model unchanged.
 
-For example, use `gpt-6-luna` for bounded Codex work when the active tool lists it as a cheaper option. Use another model when the live capabilities require it. In Claude, consider `haiku` for simple work and `sonnet` for work that needs more capability, when available. Model names are examples, not a permanent catalog.
+If no suitable lower-cost model is available, state that limit and use
+a capable model within the user's constraints. If cost information is
+unavailable, state that savings are unverified.
 
-If a result fails acceptance, identify the specific gap. Refine the assignment or increase supported effort. Escalate the model when the evidence shows a capability problem. Keep escalation within the user's budget and model constraints. Avoid repeated identical retries. If no suitable lower-cost model exists, report that limit and choose the smallest permitted capable option. Do not claim savings without evidence.
+## Assign one outcome
 
-## Dispatch a bounded task
-
-Give each subagent one cohesive outcome. Use this assignment format, with only the fields the task needs:
+Give each subagent a short, self-contained assignment. Include only the
+fields needed for the task:
 
 ```text
 Outcome and acceptance criteria:
-Role and scope: read-only or changes allowed; owned files or module
-Context: working directory, applicable instruction paths, relevant files
-Decisions and constraints: public behavior, interfaces, authorization limits
-Verification: required checks and expected observable behavior
-Artifacts: location for reports and raw logs
+Scope: read-only or changes allowed; owned files or module
+Context: working directory, instruction paths, relevant files
+Constraints: prior decisions, required behavior, authorization limits
+Verification: required checks and observable results
 Return: status, result, evidence, unresolved issues, artifact paths
-You are the execution subagent. Complete this assignment yourself.
-Return decisions outside this scope to the main session. Do not redelegate.
+
+Complete this assignment yourself. Do not redelegate.
+Return decisions outside your scope to the main session.
 ```
 
-Pass a short, self-contained brief. Include relevant user constraints that a fresh agent cannot infer from files. Have the subagent load the instructions that apply to its module. Give paths and targeted questions instead of copied repository files or full conversation history.
+Include relevant user constraints that a fresh agent cannot infer from
+files. Give paths and targeted questions instead of full repository
+files or conversation history.
 
-Run independent tasks concurrently only when useful and supported. Assign distinct write ownership. Serialize dependent work and edits to shared files, or use isolated worktrees when project instructions allow them. Keep architecture decisions in the main session while workers execute. Reuse a subagent for a correction in the same task. Start a fresh subagent for unrelated work.
+Run independent tasks concurrently when useful. Give each subagent
+distinct write ownership. Run dependent tasks and edits to shared files
+in sequence. When using isolated worktrees, assign responsibility for
+integration and verify the combined result.
 
-## Keep context small
+Reuse a subagent for corrections to the same task. Start a fresh
+subagent for unrelated work.
 
-Keep a compact record of task, agent, model, effort, status, and evidence path. Store a file for this record only when the task is long enough to need it.
+## Use the host's controls
 
-Require a final report of about 200 words or fewer by default:
+Use native subagent tools and the controls exposed by the active host.
 
-- Status: complete, partial, or blocked.
-- Result and changed file paths, with line references where useful.
-- Verification commands and outcomes. Distinguish passed, failed, and not run.
-- Remaining risks, decisions, or blockers.
-- Paths to detailed reports and raw logs.
+- **Codex:** When `collaboration.spawn_agent` exposes `model`,
+  `reasoning_effort`, and `fork_turns`, set the model and effort explicitly.
+  Use `fork_turns: "none"` with the self-contained assignment. A full-history
+  fork can prevent model overrides and copy unnecessary context.
+- **Claude Code:** Use the native `Agent` tool or its current equivalent.
+  Select the model when supported. Set effort through an exposed per-agent
+  control or a compatible existing subagent definition. Keep this skill
+  in the main session; do not add `context: fork`.
 
-Allow more detail when needed to explain a consequential finding. Put raw logs, large diffs, search results, and long reports in files. Keep secrets out of reports. Receive summaries and read only the evidence needed to assess them. A status claim alone is not evidence of completion.
+Distinguish requested settings from confirmed settings. If per-agent
+effort cannot be set, report that it is inherited or unavailable.
+Instructions to "think harder" do not configure effort.
 
-Use completion notifications or supported waits. Do not repeatedly poll transcripts. While agents work, handle architecture, acceptance criteria, or user decisions that do not duplicate their work.
+If native delegation is unavailable, explain the limit and ask whether
+the user wants direct execution. Do not change global settings or launch
+a separate paid CLI session as a substitute.
 
-## Apply the host's controls
+Consult these references only when the active tools leave a control unclear:
 
-### Codex
-
-Use native subagent tools. If `collaboration.spawn_agent` exposes `model`, `reasoning_effort`, and `fork_turns`, set the first two explicitly and use `fork_turns: "none"` with the brief. A full-history fork can both copy unnecessary context and prevent model overrides. For other Codex tool schemas, use the equivalent supported controls.
-
-### Claude Code
-
-Use the native `Agent` tool, or its equivalent in the active version. Select the model explicitly when the tool supports it. Set effort through an exposed per-agent option or a compatible existing subagent definition. Select a fresh context when supported. Avoid `context: fork` on this skill: the skill's decisions belong in the main session.
-
-If the host cannot set effort per subagent, report that effort is inherited or unavailable. Asking an agent to "think harder" does not configure reasoning effort. Do not change global settings to simulate a per-task choice.
-
-For either host, distinguish requested settings from confirmed settings. If native delegation is unavailable, explain the limit and ask whether the user wants direct execution. Do not silently replace the requested workflow or launch a separate paid CLI session.
-
-## Accept the result
-
-Compare the result with the acceptance criteria. Inspect relevant artifacts and check verification evidence. Resolve conflicts and request focused corrections before accepting the work. Complete when all requested outcomes are verified, or report a concrete blocker with the next decision needed from the user. The final response states the result, verification, and remaining limits.
-
-Host references, for use only when the active tools leave a control unclear:
 - [Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
 - [Claude Code subagents](https://code.claude.com/docs/en/sub-agents)
+
+## Check results and correct gaps
+
+Request a short report with:
+
+- Status: complete, partial, or blocked.
+- Result and changed file paths.
+- Verification commands and outcomes: passed, failed, or not run.
+- Unresolved issues and paths to supporting evidence.
+
+Use about 200 words by default. Allow more detail for consequential
+findings. Store large logs and reports in files when permitted by the
+task's scope. Keep secrets out of reports.
+
+Track task, agent, model, effort, status, and evidence location. Use a file
+only when the task needs a durable record. Use completion notifications
+or supported waits instead of repeatedly polling transcripts.
+
+Compare each result with its acceptance criteria. Inspect relevant
+artifacts and verification evidence before accepting the result.
+
+When acceptance fails, identify the gap and request a focused correction.
+Increase effort or model capability when the evidence supports that change.
+Stay within the user's budget and model constraints. Avoid identical retries.
+
+Complete the task when all requested outcomes are verified. Otherwise,
+report the concrete blocker and the decision needed from the user.
+The final response states the result, verification, and remaining limits.
